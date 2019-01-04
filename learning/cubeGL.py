@@ -1,4 +1,17 @@
+"""
+This learning example animates a rotating cube.
 
+Note the code contains the following components:
+- Loading 8 Vertices with 8 Colours
+- Uses an Index Buffer to describe the 36 Triangles (from the 8 Vertices)
+- Uses the Model View Projection matrices 
+- Uses the bit depth buffer.
+- Rotation is done in the Vertex Shader.
+
+Thanks goes to  Nicolas P. Rougier as I was able to learn this much from his book 
+which is available online for learning:
+http://www.labri.fr/perso/nrougier/python-opengl/
+"""
 import OpenGL.GLUT as glut
 import OpenGL.GL as gl 
 import OpenGL.GLU as glu
@@ -7,8 +20,6 @@ import numpy as np
 import ctypes
 import math
 import glm
-
-theta = 0
 
 vertexShaderCode = """
     uniform mat4 model;
@@ -38,6 +49,7 @@ def draw():
     gl.glDrawElements(gl.GL_TRIANGLES, 36, gl.GL_UNSIGNED_INT, offset)
     glut.glutSwapBuffers()
 
+theta = 0
 def idle():
     global theta
     loc = gl.glGetUniformLocation(program, "model")
@@ -63,14 +75,12 @@ def keyboard(key, x, y):
     if key == b'\x1b':
         sys.exit()
 
-def makePerspective(near, far, width, height):
-    P = np.eye(4, dtype=np.float32)
-    P[0][0] = 2 * near / width
-    P[1][1] = 2 * near / height
-    P[2][2] = -1.0 * (far + near) / (far - near)
-    P[3][2] = -2.0 * far * near / (far - near) 
-    P[2][3] = -1.0
-    return P
+def CompileShader(shader, szType):
+    gl.glCompileShader(shader)
+    if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
+        print(gl.glGetShaderInfoLog(shader).decode())
+        raise RuntimeError("%s Shader Compile error" % szType)
+
 
 def LoadShaders():
     program = gl.glCreateProgram()
@@ -80,17 +90,8 @@ def LoadShaders():
     gl.glShaderSource(vertex, vertexShaderCode)
     gl.glShaderSource(fragment, fragmentShaderCode)
 
-    gl.glCompileShader(vertex)
-    if not gl.glGetShaderiv(vertex, gl.GL_COMPILE_STATUS):
-        error = gl.glGetShaderInfoLog(vertex).decode()
-        print (error)
-        raise RuntimeError("Vertex Shader Compile error")
-
-    gl.glCompileShader(fragment)
-    if not gl.glGetShaderiv(fragment, gl.GL_COMPILE_STATUS):
-        error = gl.glGetShaderInfoLog(fragment).decode()
-        print (error)
-        raise RuntimeError("Frag Shader Compile error")
+    CompileShader(vertex, "Vertex")
+    CompileShader(fragment, "Fragment")
 
     gl.glAttachShader(program, vertex)
     gl.glAttachShader(program, fragment)
@@ -107,8 +108,15 @@ def LoadShaders():
     return program
 
 def LoadData(program):
+    LoadVertices(program)
 
-    # Vertices
+    LoadColoursForVertices(program)
+
+    LoadVertexIndexes()
+
+    CreateAndLoadMVPMatrices(program)
+
+def LoadVertices(program):
     V = np.zeros((8,3), dtype=np.float32)
     V[...] = [ 1, 1, 1], [-1, 1, 1], [-1,-1, 1], [ 1,-1, 1],[ 1,-1,-1], [ 1, 1,-1], [-1, 1,-1], [-1,-1,-1]
 
@@ -122,7 +130,7 @@ def LoadData(program):
     gl.glEnableVertexAttribArray(loc)
     gl.glVertexAttribPointer(loc, 3, gl.GL_FLOAT, False, stride, offset)
 
-    # Vertice Colours
+def LoadColoursForVertices(program):
     C = np.zeros((8,4), dtype=np.float32)
     C[...] = (1,1,1,1),(1,1,0,1),(1,0,1,1),(1,0,0,1),(0,1,1,1),(0,1,0,1),(0,0,0,1),(0,1,1,1)
     cbuffer = gl.glGenBuffers(1)
@@ -134,14 +142,13 @@ def LoadData(program):
     gl.glEnableVertexAttribArray(loc)
     gl.glVertexAttribPointer(loc, 4, gl.GL_FLOAT, False, stride, offset)
 
-    # Indexes
+def LoadVertexIndexes():
     I = np.array([0,1,2, 0,2,3, 0,3,4, 0,4,5, 0,5,6, 0,6,1, 1,6,7, 1,7,2, 7,4,3, 7,3,2, 4,7,6, 4,6,5], dtype=np.uint32)
     ibuffer = gl.glGenBuffers(1)
     gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, ibuffer)
     gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, I.nbytes, I, gl.GL_DYNAMIC_DRAW)
 
-
-    # MVP Matrices
+def CreateAndLoadMVPMatrices(program):
     projection = glm.perspective(45.0, 1.0, 0.5, 100.0)
     print projection
     loc = gl.glGetUniformLocation(program, "projection")
@@ -157,12 +164,11 @@ def LoadData(program):
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, glm.value_ptr(model))
 
 
-
 glut.glutInit(sys.argv)
 glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA)
 glut.glutInitWindowSize(250,250)
 glut.glutInitWindowPosition(100,100)
-glut.glutCreateWindow("OGL Program")
+glut.glutCreateWindow("Rotating Cube Program")
 program = LoadShaders()
 LoadData(program)
 print gl.glGetString(gl.GL_VERSION)

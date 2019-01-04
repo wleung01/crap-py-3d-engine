@@ -1,3 +1,12 @@
+"""
+This learning example animates a rotating, shrinking & growing square by using
+4 Vertices, and a fragment shader that interpolates colours across the 4 vertices.
+Scaling and Rotation is done in the Vertex Shader.
+
+Thanks goes to  Nicolas P. Rougier as I was able to learn this much from his book 
+which is available online for learning:
+http://www.labri.fr/perso/nrougier/python-opengl/
+"""
 import OpenGL.GLUT as glut
 import OpenGL.GL as gl 
 import OpenGL.GLU as glu
@@ -5,12 +14,6 @@ import sys
 import numpy as np
 import ctypes
 import math
-
-scale = 1.0
-scale_inc = -0.01
-
-theta = 0.0
-theta_inc = 0.05
 
 vertexShaderCode = """
     uniform float scale;
@@ -40,31 +43,43 @@ def draw():
     gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, 4)
     glut.glutSwapBuffers()
 
+scale = 1.0
+scale_inc = -0.01
+
+theta = 0.0
+theta_inc = 0.05
+
 def idle():
     global scale
     global scale_inc
     global theta
+    global theta_inc
     loc = gl.glGetUniformLocation(program, "scale")
-    gl.glUniform1f(loc, scale);
+    gl.glUniform1f(loc, scale)
     loc = gl.glGetUniformLocation(program, "theta")
-    gl.glUniform1f(loc, theta);
+    gl.glUniform1f(loc, theta)
     scale += scale_inc
     if scale < -1.0 or scale > 1.0:
-        scale_inc *= -1;
+        scale_inc *= -1
 
     theta = theta + theta_inc
     if (theta > 2 * math.pi):
         theta -= 2 * math.pi
 
-
     draw()
 
 def reshape(width, height):
-    gl.glViewport(0, 0, width, height);
+    gl.glViewport(0, 0, width, height)
 
 def keyboard(key, x, y):
     if key == b'\x1b':
         sys.exit()
+
+def CompileShader(shader, szType):
+    gl.glCompileShader(shader)
+    if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
+        print(gl.glGetShaderInfoLog(shader).decode())
+        raise RuntimeError("%s Shader Compile error" % szType)
 
 
 def LoadShaders():
@@ -75,17 +90,8 @@ def LoadShaders():
     gl.glShaderSource(vertex, vertexShaderCode)
     gl.glShaderSource(fragment, fragmentShaderCode)
 
-    gl.glCompileShader(vertex)
-    if not gl.glGetShaderiv(vertex, gl.GL_COMPILE_STATUS):
-        error = gl.glGetShaderInfoLog(vertex).decode()
-        print (error)
-        raise RuntimeError("Vertex Shader Compile error")
-
-    gl.glCompileShader(fragment)
-    if not gl.glGetShaderiv(fragment, gl.GL_COMPILE_STATUS):
-        error = gl.glGetShaderInfoLog(fragment).decode()
-        print (error)
-        raise RuntimeError("Frag Shader Compile error")
+    CompileShader(vertex, "Vertex")
+    CompileShader(fragment, "Fragment")
 
     gl.glAttachShader(program, vertex)
     gl.glAttachShader(program, fragment)
@@ -102,6 +108,11 @@ def LoadShaders():
     return program
 
 def LoadData(program):
+    LoadVertices(program)
+
+    LoadVertexColours(program)
+
+def LoadVertices(program):
     v = np.zeros((4,2), dtype=np.float32)
     v[...] = (-1,+1), (1, 1), (-1, -1), (1, -1)
 
@@ -115,6 +126,7 @@ def LoadData(program):
     gl.glEnableVertexAttribArray(loc)
     gl.glVertexAttribPointer(loc, 2, gl.GL_FLOAT, False, stride, offset)
 
+def LoadVertexColours(program):
     c = np.zeros((4,4), dtype=np.float32)
     c[...] = (1,1,0,1), (1,0,0,1), (0,0,1,1), (0,1,0,1)
     c_buffer = gl.glGenBuffers(1)
@@ -131,7 +143,7 @@ glut.glutInit(sys.argv)
 glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA)
 glut.glutInitWindowSize(250,250)
 glut.glutInitWindowPosition(100,100)
-glut.glutCreateWindow("OGL Program")
+glut.glutCreateWindow("Rotating Shrinking Square Program")
 program = LoadShaders()
 LoadData(program)
 print gl.glGetString(gl.GL_VERSION)
