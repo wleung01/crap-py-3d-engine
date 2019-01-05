@@ -6,7 +6,10 @@ Note the code contains the following components:
 - Uses an Index Buffer to describe the 36 Triangles (from the 8 Vertices)
 - Uses the Model View Projection matrices 
 - Uses the bit depth buffer.
-- Rotation is done in the Vertex Shader.
+- Rotation is done in the Vertex Shader via the application of the Model Matrix, 
+  which has had rotation matricies applied on the CPU side in idle() callback.
+  Having the shader re-calculate the P*V*M for every vertex is probably not very efficient
+  and probably should be done on the CPU, but let's not worry about that for this tutorial.
 
 Thanks goes to  Nicolas P. Rougier as I was able to learn this much from his book 
 which is available online for learning:
